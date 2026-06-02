@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pitch Visualizer</title>
+    <style>
+        body {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #start-logo {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100000;
+            text-align: center;
+            width: 85%;
+            pointer-events: auto;
+            transition: opacity 0.5s ease;
+        }
+
+        .sub-title {
+            font-size: 28px;
+            letter-spacing: 6px;
+            color: #ffffff;
+            margin-bottom: 5px;
+            font-weight: bold;
+            transition: opacity 0.5s ease;
+            text-shadow: 
+                3px  3px 0 #000, -3px  3px 0 #000,  3px -3px 0 #000, -3px -3px 0 #000,
+                3px  0px 0 #000, -3px  0px 0 #000,  0px  3px 0 #000,  0px -3px 0 #000,
+                0px  0px 8px rgba(0,0,0,1);
+        }
+
+        .main-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #ffffff;
+            line-height: 1.1;
+            transition: opacity 0.5s ease;
+            text-shadow: 
+                2px  2px 0 #000, -2px  2px 0 #000,  2px -2px 0 #000, -2px -2px 0 #000,
+                2px  0px 0 #000, -2px  0px 0 #000,  0px  2px 0 #000,  0px -2px 0 #000;
+        }
+
+        #start-hint {
+            font-size: 13px;
+            margin-top: 15px;
+            letter-spacing: 1px;
+            color: #ffffff;
+            list-style: none;
+            padding: 0;
+            line-height: 1.8;
+            transition: opacity 0.5s ease;
+            text-shadow: 
+                2px  2px 0 #000, -2px  2px 0 #000,  2px -2px 0 #000, -2px -2px 0 #000,
+                2px  0px 0 #000, -2px  0px 0 #000,  0px  2px 0 #000,  0px -2px 0 #000;
+        }
+
+        #start-btn {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 10px 30px;
+            font-size: 18px;
+            color: #00ffcc;
+            border: 2px solid #00ffcc;
+            border-radius: 50px;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.5);
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), 
+                        opacity 0.6s ease, 
+                        background 0.3s, 
+                        box-shadow 0.3s;
+            position: relative;
+            z-index: 10001;
+            text-shadow: 
+                2px  2px 0 #000, -2px  2px 0 #000,  2px -2px 0 #000, -2px -2px 0 #000;
+        }
+        #start-btn:hover {
+            background: #00ffcc;
+            color: #333;
+            box-shadow: 0 0 25px #00ffcc;
+            text-shadow: none;
+        }
+
+        .fade-out { opacity: 0 !important; pointer-events: none !important; }
+        .fade-in { opacity: 1 !important; pointer-events: auto !important; }
+
+        #display-box {
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #00ffcc;
+            border-radius: 10px;
+            padding: 8px;
+            text-align: center;
+            min-width: 100px;
+            cursor: move;
+            z-index: 5000;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        #note-name { 
+            font-size: 58px; 
+            font-weight: bold; 
+            color: #00ffcc; 
+            line-height: 1; 
+            text-shadow: 
+                3px  3px 0 #000, -3px  3px 0 #000,  3px -3px 0 #000, -3px -3px 0 #000,
+                3px  0px 0 #000, -3px  0px 0 #000,  0px  3px 0 #000,  0px -3px 0 #000,
+                0px  0px 8px rgba(0,0,0,1);
+        }
+        #frequency { 
+            font-size: 28px; 
+            opacity: 0.9; 
+            text-shadow: 
+                2px  2px 0 #000, -2px  2px 0 #000,  2px -2px 0 #000, -2px -2px 0 #000,
+                2px  0px 0 #000, -2px  0px 0 #000,  0px  2px 0 #000,  0px -2px 0 #000,
+                0px  0px 5px rgba(0,0,0,1);
+        }
+
+        .side-icon {
+            position: absolute; left: 20px; font-size: 24px;
+            cursor: pointer; z-index: 2000; opacity: 0.7;
+            border-radius: 50%; width: 40px; height: 40px; 
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s;
+            background: rgba(0,0,0,0.5);
+        }
+        .side-icon:hover { opacity: 1; transform: scale(1.05); }
+
+        #settings-icon { top: 20px; font-size: 26px; text-shadow: 2px 2px 0 #000, -2px -2px 0 #000; }
+        
+        #rec-icon { 
+            top: 70px; 
+            color: #ff0055; 
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(255, 0, 85, 0.2);
+            text-shadow: 1px 1px 0 #000;
+            display: none;
+        }
+        #rec-icon.recording {
+            color: #fff;
+            background: #ff0055;
+            box-shadow: 0 0 20px #ff0055;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        #download-icon {
+            top: 120px;
+            color: #00ffcc;
+            font-size: 20px;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+            text-shadow: 1px 1px 0 #000;
+            display: none;
+        }
+
+        #end-icon {
+            position: absolute; left: 20px; top: 170px; font-size: 22px;
+            cursor: not-allowed; z-index: 2000; opacity: 0.2; 
+            background: rgba(0,0,0,0.5); border-radius: 50%;
+            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+            color: #ff0077; 
+            transition: all 0.3s;
+            text-shadow: 1.5px 1.5px 0 #000;
+        }
+        #end-icon.enabled { cursor: pointer; opacity: 0.7; }
+        #end-icon.enabled:hover { opacity: 1; box-shadow: 0 0 10px rgba(255, 0, 119, 0.5); }
+
+        #settings-panel {
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%);
+            background: rgba(20, 20, 20, 0.98); 
+            border-radius: 6px;
+            border: 2px solid #00ffcc; 
+            z-index: 99999; 
+            display: flex; 
+            flex-direction: column; 
+            width: 340px; 
+            box-sizing: border-box;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* 🛠️ 新設：MIDI出力用ダイアログパネルのスタイルだにゃん */
+        #export-panel {
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%);
+            background: rgba(25, 20, 25, 0.98); 
+            border-radius: 6px;
+            border: 2px solid #ff0077; /* 区別しやすいようにサイバーピンクのフチにゃん */
+            z-index: 999999; 
+            display: flex; 
+            flex-direction: column; 
+            width: 320px; 
+            box-sizing: border-box;
+            overflow: hidden;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.6);
+        }
+
+        #settings-titlebar, #export-titlebar {
+            background: #2a2a2a;
+            padding: 6px 10px;
+            font-size: 11px; 
+            font-weight: bold;
+            color: #00ffcc;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+            text-transform: uppercase; 
+        }
+        #export-titlebar { color: #ff0077; }
+
+        #settings-close-x, #export-close-x {
+            cursor: pointer;
+            color: #888;
+            font-size: 12px;
+            transition: color 0.2s;
+        }
+        #settings-close-x:hover, #export-close-x:hover { color: #ff0077; }
+
+        .settings-content, .export-content {
+            padding: 10px 15px; 
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            color: white;
+        }
+        
+        #settings-panel label, #export-panel label {
+            margin-top: 6px; 
+            font-size: 10px; 
+            font-weight: 600;
+        }
+        #settings-panel select, #settings-panel input[type="range"],
+        #export-panel select, #export-panel input[type="range"] {
+            margin-top: 2px;
+            width: 100%;
+        }
+        
+        #settings-panel input[type="range"], #export-panel input[type="range"] { height: 12px; }
+
+        .hidden { display: none !important; }
+
+        #visualizer-container { 
+            display: flex; 
+            align-items: flex-end; 
+            height: 60px; 
+            width: 98vw; 
+            margin-bottom: 5px; 
+        }
+        
+        .bar { 
+            flex: 1; 
+            margin: 0 1px; 
+            background: linear-gradient(to top, #00ffcc, #00ff88); 
+            border-radius: 3px 3px 0 0; 
+            height: 0px; 
+        }
+
+        #background-text {
+            position: absolute;
+            left: 20px;
+            bottom: 95px; 
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            color: #ffffff; 
+            z-index: 1; 
+            pointer-events: none; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: bottom 0.3s;
+            text-shadow: 
+                2px  2px 0 #000, -2px  2px 0 #000,  2px -2px 0 #000, -2px -2px 0 #000;
+        }
+        
+        #piano-container { 
+            display: flex; 
+            position: relative; 
+            width: 98vw; 
+            height: 80px;
+            margin-bottom: 10px; 
+            border: 2px solid #333; 
+            box-sizing: border-box;
+        }
+
+        .key {
+            flex: 1; 
+            height: 100%; 
+            border: 1px solid #ddd; 
+            background: white;
+            color: #333; 
+            font-size: 11px; 
+            font-weight: bold; 
+            display: flex;
+            align-items: flex-end; 
+            justify-content: center; 
+            padding-bottom: 5px; 
+            box-sizing: border-box;
+            position: relative;
+            -webkit-user-select: none;
+        }
+        
+        .key.black { 
+            background: #333; 
+            color: white; 
+            height: 60%; 
+            flex: none;
+            width: 2.2%; 
+            margin-left: -1.1%; 
+            margin-right: -1.1%; 
+            z-index: 2; 
+        }
+        .active { background: #ff0077 !important; box-shadow: 0 0 15px #ff0077; }
+
+        @media (max-width: 500px) and (orientation: portrait) {
+            .sub-title { font-size: 8vw; letter-spacing: 2px; }
+            .main-title { font-size: 5vw; }
+            #start-hint { font-size: 11px; padding: 0 10px; }
+            
+            #display-box {
+                width: 50vw; 
+                left: 50% !important; 
+                transform: translateX(-50%) !important;
+                top: 52% !important;
+                background: rgba(0, 0, 0, 0.95);
+            }
+
+            #note-name { 
+                font-size: 70px; 
+                text-shadow: 
+                    3px  3px 0 #000, -3px  3px 0 #000,  3px -3px 0 #000, -3px -3px 0 #000,
+                    3px  0px 0 #000, -3px  0px 0 #000,  0px  3px 0 #000,  0px -3px 0 #000,
+                    0px  0px 8px rgba(0,0,0,1);
+            }
+            #frequency { 
+                font-size: 32px; 
+                text-shadow: 
+                    2px  2px 0 #000, -2px  2px 0 #000,  2px -2px 0 #000, -2px -2px 0 #000,
+                    2px  0px 0 #000, -2px  0px 0 #000,  0px  2px 0 #000,  0px -2px 0 #000,
+                    0px  0px 5px rgba(0,0,0,1);
+            }
+
+            #settings-icon { top: 90px; }
+            #rec-icon { top: 140px; }
+            #download-icon { top: 190px; }
+            #end-icon { top: 240px; }
+
+            #piano-container { margin-bottom: 35px; }
+            #background-text { bottom: 120px; }
+            #settings-panel, #export-panel { width: 90vw; }
+        }
+
+        @media (max-height: 500px) and (orientation: landscape) {
+            #start-logo { top: 35%; }
+            .sub-title { font-size: 5vw; margin-bottom: 2px; }
+            .main-title { font-size: 3vw; }
+            #start-hint { font-size: 11px; line-height: 1.5; margin-top: 5px; }
+            #start-btn { margin-top: 12px; padding: 6px 20px; font-size: 14px; }
+
+            #display-box {
+                width: 140px;
+                top: 35% !important;
+                left: 15% !important;
+                transform: translate(-50%, -50%) !important;
+            }
+            #note-name { font-size: 45px; }
+            #frequency { font-size: 22px; }
+
+            #settings-icon { top: 20px; }
+            #rec-icon { top: 70px; }
+            #download-icon { top: 120px; }
+            #end-icon { top: 170px; }
+
+            #background-text { bottom: 95px; }
+            #settings-panel, #export-panel { width: 300px; max-height: 90vh; }
+        }
+    </style>
+</head>
+<body>
+    <div id="start-logo">
+        <div class="sub-title">Pitch Visualizer</div>
+        <div class="main-title">VGWorks</div>
+        <ul id="start-hint">
+            <li>マイクへのアクセスを許可してください</li>
+            <li>声の音程を解析して表示します</li>
+            <li>鍵盤をクリックすると音が出せます</li>
+            <li>『⚙設定』デザインや音色を調整できます</li>
+        </ul>
+        <div id="start-btn">START</div>
+    </div>
+
+    <div id="display-box">
+        <div id="note-name">--</div>
+        <div id="frequency">0 Hz</div>
+    </div>
+
+    <div id="settings-icon" class="side-icon" title="設定">⚙</div>
+    <div id="rec-icon" class="side-icon" title="録音開始">⚫ REC</div>
+    <div id="download-icon" class="side-icon" title="MIDIダウンロード">📥 MIDI</div>
+    <div id="end-icon" title="終了してreset">⏻</div>
+
+    <div id="settings-panel" class="hidden">
+        <div id="settings-titlebar">
+            <span>⚙ settings</span>
+            <span id="settings-close-x">✕</span>
+        </div>
+        
+        <div class="settings-content">
+            <label>背景色：</label>
+            <select id="bg-color-select" style="font-size: 11px; padding: 2px;">
+                <option value="rgba(0,0,0,0.7)">半透明黒</option>
+                <option value="transparent">透明</option>
+                <option value="#00FF00">OBS用（緑）</option>
+                <option value="#0000FF">OBS用（青）</option>
+            </select>
+            
+            <label>鍵盤の透明度：<span id="opacity-val">100</span>%</label>
+            <input type="range" id="kb-opacity" min="0" max="100" value="100">
+            
+            <label>音色：</label>
+            <select id="osc-type" style="font-size: 11px; padding: 2px;">
+                <option value="sine">サイン波</option>
+                <option value="square">矩形波</option>
+                <option value="sawtooth">のこぎり波</option>
+                <option value="triangle">三角波</option>
+                <option value="custom">エレクトロ</option>
+            </select>
+            
+            <label>鍵盤の音量：<span id="vol-val">20</span>%</label>
+            <input type="range" id="kb-volume" min="0" max="100" value="20">
+
+            <div style="margin-top: 8px; border-top: 1px dashed #555; padding-top: 4px;">
+                <label style="color: #ff0077; font-weight: bold;">マイク・ループバック音量：<span id="loop-vol-val">0</span>%</label>
+                <input type="range" id="loop-volume" min="0" max="100" value="0">
+                
+                <label style="color: #ff0077; font-weight: bold;">時間差（ディレイ）：<span id="delay-val">300</span>ms</label>
+                <input type="range" id="loop-delay" min="100" max="1000" step="50" value="300">
+            </div>
+
+            <div style="margin-top: 10px; font-size: 9px; color: #888; text-align: center; border-top: 1px solid #444; padding-top: 5px;">Created by VGWorks</div>
+            <button id="close-settings" style="width:100%; margin-top:8px; padding:6px; background:#00ffcc; border:none; border-radius:4px; font-weight:bold; cursor:pointer; color: #333; font-size: 11px;">閉じるにゃん</button>
+        </div>
+    </div>
+
+    <div id="export-panel" class="hidden">
+        <div id="export-titlebar">
+            <span>📥 MIDI Export Options</span>
+            <span id="export-close-x">✕</span>
+        </div>
+        <div class="export-content">
+            <label>テンポ設定：<span id="export-bpm-val">120</span> BPM</label>
+            <input type="range" id="export-bpm" min="60" max="200" value="120">
+            
+            <label>CH2 解析最小音符（クオンタイズ単位）：</label>
+            <select id="export-quantize-select" style="font-size: 11px; padding: 4px; margin-top: 4px;">
+                <option value="16">16分音符まで細かく解析にゃん</option>
+                <option value="8">8分音符まで大まかに結合にゃん</option>
+            </select>
+
+            <button id="execute-export-btn" style="width:100%; margin-top:15px; padding:8px; background:#ff0077; border:none; border-radius:4px; font-weight:bold; cursor:pointer; color: white; font-size: 12px; box-shadow: 0 0 10px rgba(255, 0, 119, 0.4);">MIDIファイルを生成して保存するにゃん</button>
+        </div>
+    </div>
+    
+    <div id="background-text">Pitch Visualizer 1.04</div>
+    <div id="visualizer-container"></div>
+    <div id="piano-container"></div>
+
+    <script>
+        const noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        let audioContext = null, analyser = null, dataArray = null, stream = null;
+        let currentOsc = null, gainNode = null, masterVolume = 0.2;
+        const BUFSIZE = 2048, startNote = 36, endNote = 84;
+
+        let isPlayingClickNote = false;
+        let isAnalyzing = false;
+
+        let micGainNode = null;
+        let micDelayNode = null;
+
+        let isRecording = false;
+        let rawEvents = []; 
+        let recStartTime = 0;
+        let currentRecNote = -1;
+        let recTimeoutTimer = null;
+        const MAX_RECORD_TIME_MS = 10 * 60 * 1000; 
+
+        const piano = document.getElementById('piano-container');
+        const visualizer = document.getElementById('visualizer-container');
+        const dragBox = document.getElementById('display-box');
+        const settingsPanel = document.getElementById('settings-panel');
+        const settingsTitlebar = document.getElementById('settings-titlebar');
+        const exportPanel = document.getElementById('export-panel');
+        const exportTitlebar = document.getElementById('export-titlebar');
+        const endIcon = document.getElementById('end-icon');
+        const recIcon = document.getElementById('rec-icon');
+        const downloadIcon = document.getElementById('download-icon');
+        const startLogo = document.getElementById('start-logo');
+        const startBtn = document.getElementById('start-btn');
+        
+        let isDragging = false, offset = { x: 0, y: 0 };
+        let isSettingsDragging = false, settingsOffset = { x: 0, y: 0 };
+        let isExportDragging = false, exportOffset = { x: 0, y: 0 };
+        
+        let hasMovedSettings = false;
+        let hasMovedExport = false;
+
+        const attachKeyEvents = (key, note) => {
+            const handleNoteOn = (e) => { 
+                e.preventDefault(); 
+                e.stopPropagation(); 
+                playNote(note); 
+            };
+            key.addEventListener('mousedown', handleNoteOn);
+            key.addEventListener('mouseup', stopNote);
+            key.addEventListener('mouseleave', stopNote);
+            key.addEventListener('touchstart', handleNoteOn, { passive: false });
+            key.addEventListener('touchend', stopNote, { passive: false });
+        };
+
+        for (let i = startNote; i <= endNote; i++) {
+            const key = document.createElement('div');
+            const isBlack = noteStrings[i % 12].includes('#');
+            key.className = `key ${isBlack ? 'black' : 'white'}`;
+            key.id = `key-${i}`;
+            if (i % 12 === 0) key.innerText = "C" + (i / 12 - 1);
+            else if (!isBlack) key.innerText = noteStrings[i % 12];
+            
+            attachKeyEvents(key, i);
+            piano.appendChild(key);
+
+            if (!isBlack) {
+                const bar = document.createElement('div');
+                bar.className = 'bar'; bar.id = `bar-${i}`;
+                visualizer.appendChild(bar);
+            }
+        }
+
+        const getEventCoords = (e) => {
+            if (e.touches && e.touches.length > 0) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: e.clientX, y: e.clientY };
+        };
+
+        const handleStart = (e) => {
+            const coords = getEventCoords(e);
+            
+            if (e.target === dragBox || dragBox.contains(e.target)) {
+                if (e.cancelable) e.preventDefault(); 
+                isDragging = true;
+                offset.x = coords.x - dragBox.offsetLeft;
+                offset.y = coords.y - dragBox.offsetTop;
+            }
+            else if (e.target === settingsTitlebar || settingsTitlebar.contains(e.target)) {
+                if (e.target.id === 'settings-close-x') return;
+                if (e.cancelable) e.preventDefault();
+                isSettingsDragging = true;
+                hasMovedSettings = true; 
+                const rect = settingsPanel.getBoundingClientRect();
+                settingsPanel.style.transform = 'none';
+                settingsPanel.style.left = rect.left + 'px';
+                settingsPanel.style.top = rect.top + 'px';
+                settingsOffset.x = coords.x - settingsPanel.offsetLeft;
+                settingsOffset.y = coords.y - settingsPanel.offsetTop; 
+            }
+            // 🛠️ ダイアログパネルのドラッグ移動開始
+            else if (e.target === exportTitlebar || exportTitlebar.contains(e.target)) {
+                if (e.target.id === 'export-close-x') return;
+                if (e.cancelable) e.preventDefault();
+                isExportDragging = true;
+                hasMovedExport = true;
+                const rect = exportPanel.getBoundingClientRect();
+                exportPanel.style.transform = 'none';
+                exportPanel.style.left = rect.left + 'px';
+                exportPanel.style.top = rect.top + 'px';
+                exportOffset.x = coords.x - exportPanel.offsetLeft;
+                exportOffset.y = coords.y - exportPanel.offsetTop;
+            }
+        };
+
+        const handleMove = (e) => {
+            if (!isDragging && !isSettingsDragging && !isExportDragging) return;
+            if (e.cancelable) e.preventDefault();
+            
+            const coords = getEventCoords(e);
+
+            if (isDragging) {
+                dragBox.style.left = (coords.x - offset.x) + 'px';
+                dragBox.style.top = (coords.y - offset.y) + 'px';
+            }
+            if (isSettingsDragging) {
+                settingsPanel.style.left = (coords.x - settingsOffset.x) + 'px';
+                settingsPanel.style.top = (coords.y - settingsOffset.y) + 'px';
+            }
+            if (isExportDragging) {
+                exportPanel.style.left = (coords.x - exportOffset.x) + 'px';
+                exportPanel.style.top = (coords.y - exportOffset.y) + 'px';
+            }
+        };
+
+        const handleEnd = () => {
+            isDragging = false;
+            isSettingsDragging = false;
+            isExportDragging = false;
+        };
+
+        document.addEventListener('mousedown', handleStart, { passive: false });
+        document.addEventListener('mousemove', handleMove, { passive: false });
+        document.addEventListener('mouseup', handleEnd);
+
+        document.addEventListener('touchstart', handleStart, { passive: false });
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleEnd);
+
+        document.getElementById('settings-icon').onclick = (e) => { 
+            e.stopPropagation(); 
+            if (!hasMovedSettings) {
+                settingsPanel.style.transform = 'translate(-50%, -50%)';
+                settingsPanel.style.left = '50%';
+                settingsPanel.style.top = '50%';
+            }
+            settingsPanel.classList.toggle('hidden'); 
+            exportPanel.classList.add('hidden'); // 排他制御
+        };
+        
+        const closePanel = () => settingsPanel.classList.add('hidden');
+        document.getElementById('close-settings').onclick = closePanel;
+        document.getElementById('settings-close-x').onclick = closePanel;
+        
+        // 🛠️ 新設：ダイアログ用パネルのクローズイベント
+        const closeExportPanel = () => exportPanel.classList.add('hidden');
+        document.getElementById('export-close-x').onclick = closeExportPanel;
+
+        document.getElementById('export-bpm').oninput = (e) => {
+            document.getElementById('export-bpm-val').innerText = e.target.value;
+        };
+
+        document.getElementById('bg-color-select').onchange = (e) => document.body.style.backgroundColor = e.target.value;
+        
+        document.getElementById('kb-opacity').oninput = (e) => {
+            document.getElementById('opacity-val').innerText = e.target.value;
+            piano.style.opacity = visualizer.style.opacity = e.target.value / 100;
+        };
+        document.getElementById('kb-volume').oninput = (e) => {
+            masterVolume = e.target.value / 100;
+            document.getElementById('vol-val').innerText = e.target.value;
+        };
+
+        document.getElementById('loop-volume').oninput = (e) => {
+            const vol = e.target.value / 100;
+            document.getElementById('loop-vol-val').innerText = e.target.value;
+            if (micGainNode) {
+                micGainNode.gain.setValueAtTime(vol, audioContext.currentTime);
+            }
+        };
+
+        document.getElementById('loop-delay').oninput = (e) => {
+            const delayMs = e.target.value;
+            document.getElementById('delay-val').innerText = delayMs;
+            if (micDelayNode) {
+                micDelayNode.delayTime.setValueAtTime(delayMs / 1000, audioContext.currentTime);
+            }
+        };
+
+        recIcon.onclick = () => {
+            if (!isAnalyzing) return;
+
+            if (!isRecording) {
+                isRecording = true;
+                rawEvents = [];
+                currentRecNote = -1;
+                recStartTime = performance.now();
+                
+                recIcon.innerHTML = "🔲 STOP";
+                recIcon.classList.add('recording');
+                downloadIcon.style.display = "none";
+                exportPanel.classList.add('hidden');
+
+                recTimeoutTimer = setTimeout(() => {
+                    if (isRecording) recIcon.click();
+                }, MAX_RECORD_TIME_MS);
+            } else {
+                isRecording = false;
+                clearTimeout(recTimeoutTimer);
+                
+                if (currentRecNote !== -1) {
+                    rawEvents.push({
+                        type: 'noteoff',
+                        note: currentRecNote,
+                        time: performance.now() - recStartTime
+                    });
+                }
+
+                recIcon.innerHTML = "⚫ REC";
+                recIcon.classList.remove('recording');
+
+                if (rawEvents.length > 0) {
+                    downloadIcon.style.display = "flex";
+                }
+            }
+        };
+
+        // 🛠️ 改良：MIDIダウンロードアイコンを押したら、まずダイアログを出すにゃん
+        downloadIcon.onclick = (e) => {
+            e.stopPropagation();
+            if (rawEvents.length === 0) return;
+            
+            if (!hasMovedExport) {
+                exportPanel.style.transform = 'translate(-50%, -50%)';
+                exportPanel.style.left = '50%';
+                exportPanel.style.top = '50%';
+            }
+            exportPanel.classList.toggle('hidden');
+            settingsPanel.classList.add('hidden'); // 排他制御
+        };
+
+        // 🛠️ 新設：ダイアログ内の「保存するにゃん」ボタンを押して初めて書き出し実行！
+        document.getElementById('execute-export-btn').onclick = () => {
+            if (rawEvents.length === 0) return;
+
+            const targetBpm = parseInt(document.getElementById('export-bpm').value);
+            const quantizeType = parseInt(document.getElementById('export-quantize-select').value);
+
+            // ユーザー指定の条件を渡してCH2の加工を実行にゃん！
+            const processedEvents = processMidiEvents(rawEvents, targetBpm, quantizeType);
+            const midiBytes = createMultiChannelMidi(rawEvents, processedEvents, targetBpm);
+            
+            const blob = new Blob([new Uint8Array(midiBytes)], { type: 'audio/midi' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pitch_export_bpm${targetBpm}_q${quantizeType}_${Math.floor(Date.now()/1000)}.mid`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            exportPanel.classList.add('hidden'); // 保存したらダイアログを閉じる
+        };
+
+        const startAction = async () => {
+            startLogo.style.pointerEvents = 'none';
+            const subTitle = startLogo.querySelector('.sub-title');
+            const mainTitle = startLogo.querySelector('.main-title');
+            const startHint = startLogo.querySelector('#start-hint');
+            
+            if(subTitle) subTitle.style.opacity = '0';
+            if(mainTitle) mainTitle.style.opacity = '0';
+            if(startHint) startHint.style.opacity = '0';
+
+            const btnRect = startBtn.getBoundingClientRect();
+            const endRect = endIcon.getBoundingClientRect();
+
+            const moveX = endRect.left + (endRect.width / 2) - (btnRect.left + (btnRect.width / 2));
+            const moveY = endRect.top + (endRect.height / 2) - (btnRect.top + (btnRect.height / 2));
+
+            startBtn.style.transform = `translate(${moveX}px, ${moveY}px) scale(0.1)`;
+            startBtn.style.opacity = '0';
+
+            setTimeout(async () => {
+                startLogo.classList.remove('fade-in'); 
+                startLogo.classList.add('fade-out'); 
+                endIcon.classList.add('enabled');   
+                
+                await initAudio();
+                dragBox.style.opacity = '1';
+                recIcon.style.display = "flex"; 
+                isAnalyzing = true;
+            }, 600);
+        };
+        startBtn.addEventListener('click', startAction);
+
+        endIcon.onclick = () => {
+            if (!endIcon.classList.contains('enabled')) return; 
+
+            if (isRecording) {
+                recIcon.click();
+            }
+
+            isAnalyzing = false;
+            dragBox.style.opacity = '0';
+            recIcon.style.display = "none";
+            downloadIcon.style.display = "none";
+            exportPanel.classList.add('hidden');
+            
+            document.getElementById('note-name').innerText = '--';
+            document.getElementById('frequency').innerText = '0 Hz';
+            document.querySelectorAll('.bar').forEach(b => b.style.height = '0px');
+            document.querySelectorAll('.key').forEach(k => k.classList.remove('active'));
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+
+            settingsPanel.classList.add('hidden');
+            endIcon.classList.remove('enabled');
+
+            const subTitle = startLogo.querySelector('.sub-title');
+            const mainTitle = startLogo.querySelector('.main-title');
+            const startHint = startLogo.querySelector('#start-hint');
+            if(subTitle) subTitle.style.opacity = '1';
+            if(mainTitle) mainTitle.style.opacity = '1';
+            if(startHint) startHint.style.opacity = '1';
+            startBtn.style.transform = 'none';
+            startBtn.style.opacity = '1';
+
+            startLogo.style.pointerEvents = 'auto';
+            startLogo.classList.remove('fade-out');
+            startLogo.classList.add('fade-in');
+        };
+
+        async function initAudio() {
+            if (audioContext) {
+                try { await audioContext.close(); } catch(e) {}
+            }
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const source = audioContext.createMediaStreamSource(stream);
+
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = BUFSIZE;
+            source.connect(analyser);
+
+            micDelayNode = audioContext.createDelay(1.0);
+            micGainNode = audioContext.createGain();
+
+            const initialDelay = document.getElementById('loop-delay').value / 1000;
+            const initialVol = document.getElementById('loop-volume').value / 100;
+            micDelayNode.delayTime.setValueAtTime(initialDelay, audioContext.currentTime);
+            micGainNode.gain.setValueAtTime(initialVol, audioContext.currentTime);
+
+            source.connect(micDelayNode);
+            micDelayNode.connect(micGainNode);
+            micGainNode.connect(audioContext.destination);
+
+            dataArray = new Float32Array(BUFSIZE);
+        }
+
+        function updateLoop() {
+            if (isAnalyzing && analyser) {
+                analyser.getFloatTimeDomainData(dataArray);
+                const result = autoCorrelate(dataArray, audioContext.sampleRate);
+
+                document.querySelectorAll('.bar').forEach(b => b.style.height = '0px');
+                
+                let detectedMidiNote = -1;
+
+                if (result.freq !== -1) {
+                    const midiNote = Math.round(69 + 12 * Math.log2(result.freq / 440));
+                    if (midiNote >= startNote && midiNote <= endNote) {
+                        detectedMidiNote = midiNote;
+
+                        document.getElementById('note-name').innerText = noteStrings[midiNote % 12];
+                        document.getElementById('frequency').innerText = `${Math.round(result.freq)} Hz`;
+                        document.getElementById('note-name').style.color = '#00ffcc';
+                        
+                        document.querySelectorAll('.key').forEach(k => { if (!k.dataset.pressing) k.classList.remove('active'); });
+                        const activeKey = document.getElementById(`key-${midiNote}`);
+                        if (activeKey) activeKey.classList.add('active');
+                        let barTarget = midiNote; if (noteStrings[barTarget % 12].includes('#')) barTarget--; 
+                        const activeBar = document.getElementById(`bar-${barTarget}`);
+                        if (activeBar) activeBar.style.height = `${Math.min(60, result.volume * 400)}px`;
+                    }
+                }
+
+                if (isRecording) {
+                    const now = performance.now();
+                    const currentElapsed = now - recStartTime;
+
+                    if (detectedMidiNote !== currentRecNote) {
+                        if (currentRecNote !== -1) {
+                            rawEvents.push({
+                                type: 'noteoff',
+                                note: currentRecNote,
+                                time: currentElapsed
+                            });
+                        }
+                        if (detectedMidiNote !== -1) {
+                            rawEvents.push({
+                                type: 'noteon',
+                                note: detectedMidiNote,
+                                time: currentElapsed
+                            });
+                        }
+                        currentRecNote = detectedMidiNote;
+                    }
+                }
+
+                if (result.freq === -1 && !currentOsc) {
+                    document.getElementById('note-name').innerText = '--';
+                    document.getElementById('frequency').innerText = '0 Hz';
+                }
+            }
+            requestAnimationFrame(updateLoop);
+        }
+        updateLoop();
+
+        function autoCorrelate(buf, sampleRate) {
+            let rms = 0; for (let i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
+            rms = Math.sqrt(rms / buf.length);
+            if (rms < 0.01) return { freq: -1, volume: rms };
+            let c = new Array(buf.length).fill(0);
+            for (let i = 0; i < buf.length; i++) { for (let j = 0; j < buf.length - i; j++) c[i] = c[i] + buf[j] * buf[j + i]; }
+            let d = 0; while (c[d] > c[d + 1]) d++;
+            let maxval = -1, maxpos = -1;
+            for (let i = d; i < buf.length; i++) { if (c[i] > maxval) { maxval = c[i]; maxpos = i; } }
+            return { freq: sampleRate / maxpos, volume: rms };
+        }
+
+        function playNote(midiNote) {
+            if (!audioContext || !isAnalyzing) return; 
+            stopNote();
+            
+            const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
+            document.getElementById('note-name').innerText = noteStrings[midiNote % 12];
+            document.getElementById('frequency').innerText = `${Math.round(freq)} Hz`;
+
+            document.getElementById('note-name').style.color = '#ff0077';
+
+            const type = document.getElementById('osc-type').value;
+            const osc = audioContext.createOscillator();
+            const g = audioContext.createGain();
+            osc.type = (type === 'custom') ? 'sawtooth' : type;
+            osc.connect(g); g.connect(audioContext.destination);
+            const now = audioContext.currentTime;
+            g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(masterVolume, now + 0.05);
+            osc.frequency.setValueAtTime(freq, now); osc.start();
+            currentOsc = osc; gainNode = g;
+            const keyEl = document.getElementById(`key-${midiNote}`);
+            keyEl.classList.add('active'); keyEl.dataset.pressing = "true";
+        }
+
+        function stopNote() {
+            if (currentOsc) {
+                const now = audioContext.currentTime;
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                currentOsc.stop(now + 0.1); currentOsc = null;
+                document.querySelectorAll('.key').forEach(k => { k.classList.remove('active'); delete k.dataset.pressing; });
+                
+                isPlayingClickNote = false; 
+            }
+        }
+
+        // 🛠️ 改良：指定されたBPMと音符タイプ(16分 or 8分)を動的に受け取って高度処理するにゃん
+        function processMidiEvents(events, bpm, quantizeDiv) {
+            // 選択された最小音符から基準時間を計算するにゃん
+            // 4分音符の長さ(ms) = 60000 / BPM
+            // 8分音符ならその半分、16分音符ならさらにその半分
+            const quarterNoteMs = 60000 / bpm;
+            const minDurationMs = (quantizeDiv === 8) ? (quarterNoteMs / 2) : (quarterNoteMs / 4);
+            
+            let noteBlocks = [];
+            let activeNotes = {};
+
+            events.forEach(evt => {
+                if (evt.type === 'noteon') {
+                    activeNotes[evt.note] = evt.time;
+                } else if (evt.type === 'noteoff') {
+                    if (activeNotes[evt.note] !== undefined) {
+                        const start = activeNotes[evt.note];
+                        noteBlocks.push({ note: evt.note, start: start, end: evt.time, duration: evt.time - start });
+                        delete activeNotes[evt.note];
+                    }
+                }
+            });
+
+            if (noteBlocks.length === 0) return [];
+
+            let clearedBlocks = [];
+            noteBlocks.forEach(block => {
+                if (block.duration >= minDurationMs) {
+                    clearedBlocks.push(block);
+                } else {
+                    if (clearedBlocks.length > 0) {
+                        let prev = clearedBlocks[clearedBlocks.length - 1];
+                        if (prev.note === block.note && (block.start - prev.end) < minDurationMs) {
+                            prev.end = block.end;
+                            prev.duration = prev.end - prev.start;
+                        }
+                    }
+                }
+            });
+
+            if (clearedBlocks.length === 0) return [];
+
+            let mergedBlocks = [];
+            let currentBlock = Object.assign({}, clearedBlocks[0]);
+
+            for (let i = 1; i < clearedBlocks.length; i++) {
+                let nextBlock = clearedBlocks[i];
+                
+                if (currentBlock.note === nextBlock.note && (nextBlock.start - currentBlock.end) < minDurationMs) {
+                    currentBlock.end = nextBlock.end;
+                    currentBlock.duration = currentBlock.end - currentBlock.start;
+                } else {
+                    mergedBlocks.push(currentBlock);
+                    currentBlock = Object.assign({}, nextBlock);
+                }
+            }
+            mergedBlocks.push(currentBlock); 
+
+            mergedBlocks.forEach(block => {
+                if (block.end - block.start < minDurationMs) {
+                    block.end = block.start + minDurationMs;
+                }
+            });
+
+            let outEvents = [];
+            mergedBlocks.forEach(block => {
+                outEvents.push({ type: 'noteon', note: block.note, time: block.start });
+                outEvents.push({ type: 'noteoff', note: block.note, time: block.end });
+            });
+
+            outEvents.sort((a, b) => a.time - b.time);
+            return outEvents;
+        }
+
+        // 🛠️ 改良：BPM情報を内部バイナリに動的埋め込みできるマルチトラック生成エンジン
+        function createMultiChannelMidi(rawEvts, processedEvts, bpm) {
+            const ppq = 480; 
+            // 指定BPMにおけるミリ秒からTickへの変換係数
+            const msToTicks = (bpm * ppq) / 60000;
+
+            function pushDeltaTime(array, ticks) {
+                let value = ticks;
+                let buffer = [value & 0x7F];
+                while ((value >>= 7) > 0) { buffer.push((value & 0x7F) | 0x80); }
+                buffer.reverse();
+                array.push(...buffer);
+            }
+
+            function compileTrack(events, channelByte, includeTempo = false) {
+                let track = [];
+                let lastTick = 0;
+
+                // 🛠️ トラックの最先頭にユーザー指定のテンポ変更メタイベントを仕込むにゃん！
+                if (includeTempo) {
+                    pushDeltaTime(track, 0); // デルタタイム0
+                    // 4分音符のマイクロ秒 = 60,000,000 / BPM
+                    const usPerQuarter = Math.round(60000000 / bpm);
+                    track.push(
+                        0xFF, 0x51, 0x03, // テンポ設定イベント
+                        (usPerQuarter >> 16) & 0xFF,
+                        (usPerQuarter >> 8) & 0xFF,
+                        usPerQuarter & 0xFF
+                    );
+                }
+
+                events.forEach(evt => {
+                    let currentTick = Math.round(evt.time * msToTicks);
+                    let deltaTime = currentTick - lastTick;
+                    if (deltaTime < 0) deltaTime = 0;
+
+                    pushDeltaTime(track, deltaTime);
+
+                    if (evt.type === 'noteon') {
+                        track.push(0x90 | channelByte, evt.note, 0x64); 
+                    } else if (evt.type === 'noteoff') {
+                        track.push(0x80 | channelByte, evt.note, 0x40); 
+                    }
+                    lastTick = currentTick;
+                });
+
+                pushDeltaTime(track, 0);
+                track.push(0xFF, 0x2F, 0x00);
+                return track;
+            }
+
+            // 1トラック目にテンポイベントを含めるにゃん
+            const track1Data = compileTrack(rawEvts, 0, true);
+            const track2Data = compileTrack(processedEvts, 1, false);
+
+            const mthd = [
+                0x4D, 0x54, 0x68, 0x64, 
+                0x00, 0x00, 0x00, 0x06, 
+                0x00, 0x01,             
+                0x00, 0x02,             
+                (ppq >> 8) & 0xFF, ppq & 0xFF 
+            ];
+
+            const len1 = track1Data.length;
+            const mtrk1 = [
+                0x4D, 0x54, 0x72, 0x6B, 
+                (len1 >> 24) & 0xFF, (len1 >> 16) & 0xFF, (len1 >> 8) & 0xFF, len1 & 0xFF
+            ];
+
+            const len2 = track2Data.length;
+            const mtrk2 = [
+                0x4D, 0x54, 0x72, 0x6B, 
+                (len2 >> 24) & 0xFF, (len2 >> 16) & 0xFF, (len2 >> 8) & 0xFF, len2 & 0xFF
+            ];
+
+            return [...mthd, ...mtrk1, ...track1Data, ...mtrk2, ...track2Data];
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pitch Visualizer</title>
+    <style>
+        body {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            /* 🛠️ iPhoneの青い選択ピン（ツマミ）を徹底的に出さないようにガードにゃん */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 初期ロゴのスタイルだにゃん */
+        #start-logo {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100000; /* 🛠️ 背景色に埋もれないよう最前面に引き上げたにゃん */
+            text-align: center;
+            width: 85%;
+            pointer-events: auto;
+            transition: opacity 0.5s ease;
+        }
+
+        /* 一番上のタイトルにゃん「Pitch Visualizer」 */
+        .sub-title {
+            font-size: 28px;
+            letter-spacing: 6px;
+            color: #ffffff; /* 🛠️ グリーンバックで見えるよう色を100%白にしてフチをつけるにゃん */
+            margin-bottom: 5px;
+            font-weight: bold;
+            transition: opacity 0.5s ease;
+            text-shadow: 
+                3px  3px 0 #000, -3px  3px 0 #000,  3px -3px 0 #000, -3px -3px 0 #000,
+                3px  0px 0 #000, -3px  0px 0 #000,  0px  3px 0 #000,  0px -3px 0 #000,
+                0px  0px 8px rgba(0,0,0,1);
+        }
+
+        /* VGWorksロゴ */
+        .main-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #ffffff; /* 🛠️ ここも文字色を白にしてクッキリフチをつけるにゃん */
+            line-height: 1.1;
+            transition: opacity 0.5s ease;
+            text-shadow: 
+                2px  2px 0 #000, -2px  2px 0 #000,  2px -2px 0 #000, -2px -2px 0 #000,
+                2px  0px 0 #000, -2px  0px 0 #000,  0px  2px 0 #000,  0px -2px 0 #000;
+        }
+
+        /* スタート画面の説明文リスト */
+        #start-hint {
+            font-size: 13px;
+            margin-top: 15px;
+            letter-spacing: 1px;
+            color: #ffffff; /* 🛠️ ここも文字色を白にしてクッキリフチをつけるにゃん */
+            list-style: none;
+            padding: 0;
+            line-height: 1.8;
+            transition: opacity 0.5s ease;
+            text-shadow: 
+                2px  2px 0 #000, -2px  2px 0 #000,  2px -2px 0 #000, -2px -2px 0 #000,
+                2px  0px 0 #000, -2px  0px 0 #000,  0px  2px 0 #000,  0px -2px 0 #000;
+        }
+
+        /* STARTボタン */
+        #start-btn {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 10px 30px;
+            font-size: 18px;
+            color: #00ffcc;
+            border: 2px solid #00ffcc;
+            border-radius: 50px;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.8); /* 🛠️ グリーンバックに負けないようボタン背景を暗くしたにゃん */
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.5);
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), 
+                        opacity 0.6s ease, 
+                        background 0.3s, 
+                        box-shadow 0.3s;
+            position: relative;
+            z-index: 100001; /* 🛠️ ボタンを確実に入力可能にするにゃん */
+            text-shadow: 
+                2px  2px 0 #000, -2px  2px 0 #000,  2px -2px 0 #000, -2px -2px 0 #000;
+        }
+        #start-btn:hover {
+            background: #00ffcc;
+            color: #333;
+            box-shadow: 0 0 25px #00ffcc;
+            text-shadow: none;
+        }
+
+        .fade-out { opacity: 0 !important; pointer-events: none !important; }
+        .fade-in { opacity: 1 !important; pointer-events: auto !important; }
+
+        /* 移動可能な情報ボックス */
+        #display-box {
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #00ffcc;
+            border-radius: 10px;
+            padding: 8px;
+            text-align: center;
+            min-width: 100px;
+            cursor: move;
+            z-index: 5000;
+            opacity: 0; /* 🛠️ 初期状態は非表示にして、START後にフワッと出すにゃん */
+            transition: opacity 0.5s ease;
+        }
+
+        /* 🛠️ Chromeの描画バグを回避しつつフチを極太にするにゃん！ */
+        #note-name { 
+            font-size: 58px; 
+            font-weight: bold; 
+            color: #00ffcc; 
+            line-height: 1; 
+            /* 3pxの極太縁取り＋ほんのりボカシ影で視認性MAX */
+            text-shadow: 
+                3px  3px 0 #000, -3px  3px 0 #000,  3px -3px 0 #000, -3px -3px 0 #000,
+                3px  0px 0 #000, -3px  0px 0 #000,  0px  3px 0 #000,  0px -3px 0 #000,
+                0px  0px 8px rgba(0,0,0,1);
+        }
+        #frequency { 
+            font-size: 28px; 
+            opacity: 0.9; 
+            /* 2pxのしっかりした縁取り */
+            text-shadow: 
+                2px  2px 0 #000, -2px  2px 0 #000,  2px -2px 0 #000, -2px -2px 0 #000,
+                2px  0px 0 #000, -2px  0px 0 #000,  0px  2px 0 #000,  0px -2px 0 #000,
+                0px  0px 5px rgba(0,0,0,1);
+        }
+
+        /* 左側アイコン群の共通設定にゃん */
+        .side-icon {
+            position: absolute; left: 20px; font-size: 24px;
+            cursor: pointer; z-index: 2000; opacity: 0.7;
+            border-radius: 50%; width: 40px; height: 40px; 
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s;
+            background: rgba(0,0,0,0.5);
+        }
+        .side-icon:hover { opacity: 1; transform: scale(1.05); }
+
+        #settings-icon { top: 20px; font-size: 26px; text-shadow: 2px 2px 0 #000, -2px -2px 0 #000; }
+        
+        /* 🛠️ 新設：録音ボタンの設定だにゃん */
+        #rec-icon { 
+            top: 70px; 
+            color: #ff0055; 
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(255, 0, 85, 0.2);
+            text-shadow: 1px 1px 0 #000;
+            display: none; /* STARTボタンを押すまでは非表示 */
+        }
+        #rec-icon.recording {
+            color: #fff;
+            background: #ff0055;
+            box-shadow: 0 0 20px #ff0055;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        /* 🛠️ 新設：MIDIダウンロードボタンの設定だにゃん */
+        #download-icon {
+            top: 120px;
+            color: #00ffcc;
+            font-size: 20px;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+            text-shadow: 1px 1px 0 #000;
+            display: none; /* 録音データがある時だけJSで出す */
+        }
+
+        #end-icon {
+            position: absolute; left: 20px; top: 170px; font-size: 22px;
+            cursor: not-allowed; z-index: 2000; opacity: 0.2; 
+            background: rgba(0,0,0,0.5); border-radius: 50%;
+            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+            color: #ff0077; 
+            transition: all 0.3s;
+            text-shadow: 1.5px 1.5px 0 #000;
+        }
+        #end-icon.enabled { cursor: pointer; opacity: 0.7; }
+        #end-icon.enabled:hover { opacity: 1; box-shadow: 0 0 10px rgba(255, 0, 119, 0.5); }
+
+        /* 設定パネル */
+        #settings-panel {
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%);
+            background: rgba(20, 20, 20, 0.98); 
+            border-radius: 6px;
+            border: 2px solid #00ffcc; 
+            z-index: 99999; 
+            display: flex; 
+            flex-direction: column; 
+            width: 340px; 
+            box-sizing: border-box;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #settings-titlebar {
+            background: #2a2a2a;
+            padding: 6px 10px;
+            font-size: 11px; 
+            font-weight: bold;
+            color: #00ffcc;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+            text-transform: uppercase; 
+        }
+
+        #settings-close-x {
+            cursor: pointer;
+            color: #888;
+            font-size: 12px;
+            transition: color 0.2s;
+        }
+        #settings-close-x:hover {
+            color: #ff0077;
+        }
+
+        .settings-content {
+            padding: 10px 15px; 
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            color: white;
+        }
+        
+        #settings-panel label {
+            margin-top: 5px; 
+            font-size: 10px; 
+            font-weight: 600;
+        }
+        #settings-panel select, #settings-panel input[type="range"] {
+            margin-top: 2px;
+            width: 100%;
+        }
+        
+        #settings-panel input[type="range"] {
+            height: 12px;
+        }
+
+        .hidden { display: none !important; }
+
+        /* 棒グラフコンテナ */
+        #visualizer-container { 
+            display: flex; 
+            align-items: flex-end; 
+            height: 60px; 
+            width: 98vw; 
+            margin-bottom: 5px; 
+        }
+        
+        .bar { 
+            flex: 1; 
+            margin: 0 1px; 
+            background: linear-gradient(to top, #00ffcc, #00ff88); 
+            border-radius: 3px 3px 0 0; 
+            height: 0px; 
+        }
+
+        /* 「Pitch Visualizer」（左下のバージョン表記テキスト） */
+        #background-text {
+            position: absolute;
+            left: 20px;
+            bottom: 95px; /* 🛠️ 鍵盤の上ギリギリを攻めるにゃん */
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            color: #ffffff; /* 🛠️ ここも透明度を廃止して白字＋フチに変更するにゃん */
+            z-index: 1; 
+            pointer-events: none; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: bottom 0.3s;
+            text-shadow: 
+                2px  2px 0 #000, -2px  2px 0 #000,  2px -2px 0 #000, -2px -2px 0 #000;
+        }
+        
+        /* ピアノ全体のコンテナ */
+        #piano-container { 
+            display: flex; 
+            position: relative; 
+            width: 98vw; 
+            height: 80px;
+            margin-bottom: 10px; 
+            border: 2px solid #333; 
+            box-sizing: border-box;
+        }
+
+        .key {
+            flex: 1; 
+            height: 100%; 
+            border: 1px solid #ddd; 
+            background: white;
+            color: #333; 
+            font-size: 11px; 
+            font-weight: bold; 
+            display: flex;
+            align-items: flex-end; 
+            justify-content: center; 
+            padding-bottom: 5px; 
+            box-sizing: border-box;
+            position: relative;
+            -webkit-user-select: none; /* 🛠️ 鍵盤長押し時の青ピン防止 */
+        }
+        
+        .key.black { 
+            background: #333; 
+            color: white; 
+            height: 60%; 
+            flex: none;
+            width: 2.2%; 
+            margin-left: -1.1%; 
+            margin-right: -1.1%; 
+            z-index: 2; 
+        }
+        .active { background: #ff0077 !important; box-shadow: 0 0 15px #ff0077; }
+
+        /* 🛠️ 縦画面スマホ（iPhone縦持ち）専用の調整 */
+        @media (max-width: 500px) and (orientation: portrait) {
+            .sub-title { font-size: 8vw; letter-spacing: 2px; }
+            .main-title { font-size: 5vw; }
+            #start-hint { font-size: 11px; padding: 0 10px; }
+            
+            #display-box {
+                width: 50vw; 
+                left: 50% !important; 
+                transform: translateX(-50%) !important;
+                /* 縦画面時はSTARTボタン通過後に中央あたりの高さにするにゃん */
+                top: 52% !important;
+                background: rgba(0, 0, 0, 0.95);
+            }
+
+            /* 🛠️ 縦画面側でも極太縁取りを同期するにゃん */
+            #note-name { 
+                font-size: 70px; 
+                text-shadow: 
+                    3px  3px 0 #000, -3px  3px 0 #000,  3px -3px 0 #000, -3px -3px 0 #000,
+                    3px  0px 0 #000, -3px  0px 0 #000,  0px  3px 0 #000,  0px -3px 0 #000,
+                    0px  0px 8px rgba(0,0,0,1);
+            }
+            #frequency { 
+                font-size: 32px; 
+                text-shadow: 
+                    2px  2px 0 #000, -2px  2px 0 #000,  2px -2px 0 #000, -2px -2px 0 #000,
+                    2px  0px 0 #000, -2px  0px 0 #000,  0px  2px 0 #000,  0px -2px 0 #000,
+                    0px  0px 5px rgba(0,0,0,1);
+            }
+
+            #settings-icon { top: 90px; }
+            #rec-icon { top: 140px; }
+            #download-icon { top: 190px; }
+            #end-icon { top: 240px; }
+
+            #piano-container { margin-bottom: 35px; }
+            #background-text { bottom: 120px; } /* 縦画面時はセーフエリア分上げる */
+            #settings-panel { width: 90vw; }
+        }
+
+        /* 🛠️ 横画面スマホ（iPhone横持ち）専用の調整だにゃん！ */
+        @media (max-height: 500px) and (orientation: landscape) {
+            #start-logo {
+                top: 35%; /* 縦幅が狭いので少し上に寄せてバランスを整えるにゃん */
+            }
+            .sub-title { font-size: 5vw; margin-bottom: 2px; }
+            .main-title { font-size: 3vw; }
+            #start-hint { font-size: 11px; line-height: 1.5; margin-top: 5px; }
+            #start-btn { margin-top: 12px; padding: 6px 20px; font-size: 14px; }
+
+            /* 🛠️ BOXが鍵盤や中央文字と重ならない安全地帯（左上〜中央寄り）に配置にゃん */
+            #display-box {
+                width: 140px;
+                top: 35% !important;
+                left: 15% !important;
+                transform: translate(-50%, -50%) !important;
+            }
+            #note-name { font-size: 45px; }
+            #frequency { font-size: 22px; }
+
+            /* 横画面時はアドレスバーが引っ込むので、アイコンは本来の左上でスッキリさせるにゃん */
+            #settings-icon { top: 20px; }
+            #rec-icon { top: 70px; }
+            #download-icon { top: 120px; }
+            #end-icon { top: 170px; }
+
+            /* 🛠️ バージョンロゴを鍵盤（高さ80px＋下マージン10px）の真上ギリギリに配置にゃん！ */
+            #background-text {
+                bottom: 95px; /* 80+10=90pxのすぐ上、完璧だにゃん！ */
+            }
+            /* 設定パネルがはみ出さないようにスリム化 */
+            #settings-panel {
+                width: 300px;
+                max-height: 90vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="start-logo">
+        <div class="sub-title">Pitch Visualizer</div>
+        <div class="main-title">VGWorks</div>
+        <ul id="start-hint">
+            <li>マイクへのアクセスを許可してください</li>
+            <li>声の音程を解析して表示します</li>
+            <li>鍵盤をクリックすると音が出せます</li>
+            <li>『⚙設定』デザインや音色を調整できます</li>
+            <li>録音機能が追加されたわ！MIDI出力可β</li>
+        </ul>
+        <div id="start-btn">START</div>
+    </div>
+
+    <div id="display-box">
+        <div id="note-name">--</div>
+        <div id="frequency">0 Hz</div>
+    </div>
+
+    <div id="settings-icon" class="side-icon" title="設定">⚙</div>
+    <div id="rec-icon" class="side-icon" title="録音開始">⚫ REC</div>
+    <div id="download-icon" class="side-icon" title="MIDIダウンロード">📥 MIDI</div>
+    <div id="end-icon" title="終了してreset">⏻</div>
+
+    <div id="settings-panel" class="hidden">
+        <div id="settings-titlebar">
+            <span>⚙ settings</span>
+            <span id="settings-close-x">✕</span>
+        </div>
+        
+        <div class="settings-content">
+            <label>背景色：</label>
+            <select id="bg-color-select" style="font-size: 11px; padding: 2px;">
+                <option value="rgba(0,0,0,0.7)">半透明黒</option>
+                <option value="transparent">透明</option>
+                <option value="#00FF00">OBS用（緑）</option>
+                <option value="#0000FF">OBS用（青）</option>
+            </select>
+            
+            <label>鍵盤の透明度：<span id="opacity-val">100</span>%</label>
+            <input type="range" id="kb-opacity" min="0" max="100" value="100">
+            
+            <label>音色：</label>
+            <select id="osc-type" style="font-size: 11px; padding: 2px;">
+                <option value="sine">サイン波</option>
+                <option value="square">矩形波</option>
+                <option value="sawtooth">のこぎり波</option>
+                <option value="triangle">三角波</option>
+                <option value="custom">エレクトロ</option>
+            </select>
+            
+            <label>鍵盤の音量：<span id="vol-val">20</span>%</label>
+            <input type="range" id="kb-volume" min="0" max="100" value="20">
+
+            <div style="margin-top: 8px; border-top: 1px dashed #555; padding-top: 4px;">
+                <label style="color: #ff0077; font-weight: bold;">マイク・ループバック音量：<span id="loop-vol-val">0</span>%</label>
+                <input type="range" id="loop-volume" min="0" max="100" value="0">
+                
+                <label style="color: #ff0077; font-weight: bold;">時間差（ディレイ）：<span id="delay-val">300</span>ms</label>
+                <input type="range" id="loop-delay" min="100" max="1000" step="50" value="300">
+            </div>
+
+            <div style="margin-top: 10px; font-size: 9px; color: #888; text-align: center; border-top: 1px solid #444; padding-top: 5px;">Created by VGWorks</div>
+            <button id="close-settings" style="width:100%; margin-top:8px; padding:6px; background:#00ffcc; border:none; border-radius:4px; font-weight:bold; cursor:pointer; color: #333; font-size: 11px;">閉じるにゃん</button>
+        </div>
+    </div>
+    
+    <div id="background-text">Pitch Visualizer 1.02</div>
+    <div id="visualizer-container"></div>
+    <div id="piano-container"></div>
+
+    <script>
+        const noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        let audioContext = null, analyser = null, dataArray = null, stream = null;
+        let currentOsc = null, gainNode = null, masterVolume = 0.2;
+        const BUFSIZE = 2048, startNote = 36, endNote = 84;
+
+        let isPlayingClickNote = false;
+        let isAnalyzing = false;
+
+        let micGainNode = null;
+        let micDelayNode = null;
+
+        // 🛠️ 録音用データ管理エリアだにゃん
+        let isRecording = false;
+        let recordedEvents = []; // 録音データを詰める配列
+        let recStartTime = 0;
+        let currentRecNote = -1; // 現在録音中の音番号
+        let currentNoteStartTime = 0;
+        let recTimeoutTimer = null;
+        const MAX_RECORD_TIME_MS = 10 * 60 * 1000; // 最大録音時間（10分）
+
+        const piano = document.getElementById('piano-container');
+        const visualizer = document.getElementById('visualizer-container');
+        const dragBox = document.getElementById('display-box');
+        const settingsPanel = document.getElementById('settings-panel');
+        const settingsTitlebar = document.getElementById('settings-titlebar');
+        const endIcon = document.getElementById('end-icon');
+        const recIcon = document.getElementById('rec-icon');
+        const downloadIcon = document.getElementById('download-icon');
+        const startLogo = document.getElementById('start-logo');
+        const startBtn = document.getElementById('start-btn');
+        
+        let isDragging = false, offset = { x: 0, y: 0 };
+        let isSettingsDragging = false, settingsOffset = { x: 0, y: 0 };
+        
+        let hasMovedSettings = false;
+
+        const attachKeyEvents = (key, note) => {
+            const handleNoteOn = (e) => { 
+                e.preventDefault(); 
+                e.stopPropagation(); 
+                playNote(note); 
+            };
+            key.addEventListener('mousedown', handleNoteOn);
+            key.addEventListener('mouseup', stopNote);
+            key.addEventListener('mouseleave', stopNote);
+            key.addEventListener('touchstart', handleNoteOn, { passive: false });
+            key.addEventListener('touchend', stopNote, { passive: false });
+        };
+
+        for (let i = startNote; i <= endNote; i++) {
+            const key = document.createElement('div');
+            const isBlack = noteStrings[i % 12].includes('#');
+            key.className = `key ${isBlack ? 'black' : 'white'}`;
+            key.id = `key-${i}`;
+            if (i % 12 === 0) key.innerText = "C" + (i / 12 - 1);
+            else if (!isBlack) key.innerText = noteStrings[i % 12];
+            
+            attachKeyEvents(key, i);
+            piano.appendChild(key);
+
+            if (!isBlack) {
+                const bar = document.createElement('div');
+                bar.className = 'bar'; bar.id = `bar-${i}`;
+                visualizer.appendChild(bar);
+            }
+        }
+
+        // --- ドラッグ＆タッチ移動の制御エリア ---
+
+        const getEventCoords = (e) => {
+            if (e.touches && e.touches.length > 0) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: e.clientX, y: e.clientY };
+        };
+
+        const handleStart = (e) => {
+            const coords = getEventCoords(e);
+            
+            if (e.target === dragBox || dragBox.contains(e.target)) {
+                if (e.cancelable) e.preventDefault(); 
+                isDragging = true;
+                offset.x = coords.x - dragBox.offsetLeft;
+                offset.y = coords.y - dragBox.offsetTop;
+            }
+            else if (e.target === settingsTitlebar || settingsTitlebar.contains(e.target)) {
+                if (e.target.id === 'settings-close-x') return;
+                if (e.cancelable) e.preventDefault();
+                
+                isSettingsDragging = true;
+                hasMovedSettings = true; 
+                
+                const rect = settingsPanel.getBoundingClientRect();
+                settingsPanel.style.transform = 'none';
+                settingsPanel.style.left = rect.left + 'px';
+                settingsPanel.style.top = rect.top + 'px';
+                
+                settingsOffset.x = coords.x - settingsPanel.offsetLeft;
+                settingsOffset.y = coords.y - settingsPanel.offsetTop; 
+            }
+        };
+
+        const handleMove = (e) => {
+            if (!isDragging && !isSettingsDragging) return;
+            if (e.cancelable) e.preventDefault();
+            
+            const coords = getEventCoords(e);
+
+            if (isDragging) {
+                dragBox.style.left = (coords.x - offset.x) + 'px';
+                dragBox.style.top = (coords.y - offset.y) + 'px';
+            }
+            if (isSettingsDragging) {
+                settingsPanel.style.left = (coords.x - settingsOffset.x) + 'px';
+                settingsPanel.style.top = (coords.y - settingsOffset.y) + 'px';
+            }
+        };
+
+        const handleEnd = () => {
+            isDragging = false;
+            isSettingsDragging = false;
+        };
+
+        document.addEventListener('mousedown', handleStart, { passive: false });
+        document.addEventListener('mousemove', handleMove, { passive: false });
+        document.addEventListener('mouseup', handleEnd);
+
+        document.addEventListener('touchstart', handleStart, { passive: false });
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleEnd);
+
+        document.getElementById('settings-icon').onclick = (e) => { 
+            e.stopPropagation(); 
+            if (!hasMovedSettings) {
+                settingsPanel.style.transform = 'translate(-50%, -50%)';
+                settingsPanel.style.left = '50%';
+                settingsPanel.style.top = '50%';
+            }
+            settingsPanel.classList.toggle('hidden'); 
+        };
+        
+        const closePanel = () => settingsPanel.classList.add('hidden');
+        document.getElementById('close-settings').onclick = closePanel;
+        document.getElementById('settings-close-x').onclick = closePanel;
+        
+        document.getElementById('bg-color-select').onchange = (e) => document.body.style.backgroundColor = e.target.value;
+        
+        document.getElementById('kb-opacity').oninput = (e) => {
+            document.getElementById('opacity-val').innerText = e.target.value;
+            piano.style.opacity = visualizer.style.opacity = e.target.value / 100;
+        };
+        document.getElementById('kb-volume').oninput = (e) => {
+            masterVolume = e.target.value / 100;
+            document.getElementById('vol-val').innerText = e.target.value;
+        };
+
+        document.getElementById('loop-volume').oninput = (e) => {
+            const vol = e.target.value / 100;
+            document.getElementById('loop-vol-val').innerText = e.target.value;
+            if (micGainNode) {
+                micGainNode.gain.setValueAtTime(vol, audioContext.currentTime);
+            }
+        };
+
+        document.getElementById('loop-delay').oninput = (e) => {
+            const delayMs = e.target.value;
+            document.getElementById('delay-val').innerText = delayMs;
+            if (micDelayNode) {
+                micDelayNode.delayTime.setValueAtTime(delayMs / 1000, audioContext.currentTime);
+            }
+        };
+
+        // 🛠️ 新設：録音ボタンのクリックイベントだにゃん！
+        recIcon.onclick = () => {
+            if (!isAnalyzing) return;
+
+            if (!isRecording) {
+                // 録音開始の処理
+                isRecording = true;
+                recordedEvents = [];
+                currentRecNote = -1;
+                recStartTime = performance.now();
+                
+                recIcon.innerHTML = "🔲 STOP";
+                recIcon.classList.add('recording');
+                downloadIcon.style.display = "none"; // 録音中はDLボタンを隠すにゃん
+
+                // 10分タイマーセット
+                recTimeoutTimer = setTimeout(() => {
+                    if (isRecording) recIcon.click();
+                }, MAX_RECORD_TIME_MS);
+            } else {
+                // 録音中止（ストップ）の処理
+                isRecording = false;
+                clearTimeout(recTimeoutTimer);
+                
+                // 最後に鳴りっぱなしの音があれば閉じる
+                if (currentRecNote !== -1) {
+                    const now = performance.now();
+                    recordedEvents.push({
+                        type: 'noteoff',
+                        note: currentRecNote,
+                        time: now - recStartTime
+                    });
+                }
+
+                recIcon.innerHTML = "⚫ REC";
+                recIcon.classList.remove('recording');
+
+                // 録音データが空じゃなければDownloadボタンを出すにゃん
+                if (recordedEvents.length > 0) {
+                    downloadIcon.style.display = "flex";
+                }
+            }
+        };
+
+        // 🛠️ 新設：MIDIダウンロードボタンのクリックイベントだにゃん！
+        downloadIcon.onclick = () => {
+            if (recordedEvents.length === 0) return;
+            const midiBytes = createMidiFile(recordedEvents);
+            const blob = new Blob([new Uint8Array(midiBytes)], { type: 'audio/midi' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pitch_pitchlog_${Math.floor(Date.now()/1000)}.mid`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        const startAction = async () => {
+            startLogo.style.pointerEvents = 'none';
+            const subTitle = startLogo.querySelector('.sub-title');
+            const mainTitle = startLogo.querySelector('.main-title');
+            const startHint = startLogo.querySelector('#start-hint');
+            
+            if(subTitle) subTitle.style.opacity = '0';
+            if(mainTitle) mainTitle.style.opacity = '0';
+            if(startHint) startHint.style.opacity = '0';
+
+            const btnRect = startBtn.getBoundingClientRect();
+            const endRect = endIcon.getBoundingClientRect();
+
+            const moveX = endRect.left + (endRect.width / 2) - (btnRect.left + (btnRect.width / 2));
+            const moveY = endRect.top + (endRect.height / 2) - (btnRect.top + (btnRect.height / 2));
+
+            startBtn.style.transform = `translate(${moveX}px, ${moveY}px) scale(0.1)`;
+            startBtn.style.opacity = '0';
+
+            setTimeout(async () => {
+                startLogo.classList.remove('fade-in'); 
+                startLogo.classList.add('fade-out'); 
+                endIcon.classList.add('enabled');   
+                
+                await initAudio();
+                dragBox.style.opacity = '1';
+                recIcon.style.display = "flex"; // STARTしたらRECボタンを出す
+                isAnalyzing = true;
+            }, 600);
+        };
+        startBtn.addEventListener('click', startAction);
+
+        endIcon.onclick = () => {
+            if (!endIcon.classList.contains('enabled')) return; 
+
+            // もし録音中なら強制ストップさせるにゃん
+            if (isRecording) {
+                recIcon.click();
+            }
+
+            isAnalyzing = false;
+            dragBox.style.opacity = '0';
+            recIcon.style.display = "none";
+            downloadIcon.style.display = "none";
+            
+            document.getElementById('note-name').innerText = '--';
+            document.getElementById('frequency').innerText = '0 Hz';
+            document.querySelectorAll('.bar').forEach(b => b.style.height = '0px');
+            document.querySelectorAll('.key').forEach(k => k.classList.remove('active'));
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+
+            settingsPanel.classList.add('hidden');
+            endIcon.classList.remove('enabled');
+
+            const subTitle = startLogo.querySelector('.sub-title');
+            const mainTitle = startLogo.querySelector('.main-title');
+            const startHint = startLogo.querySelector('#start-hint');
+            if(subTitle) subTitle.style.opacity = '1';
+            if(mainTitle) mainTitle.style.opacity = '1';
+            if(startHint) startHint.style.opacity = '1';
+            startBtn.style.transform = 'none';
+            startBtn.style.opacity = '1';
+
+            startLogo.style.pointerEvents = 'auto';
+            startLogo.classList.remove('fade-out');
+            startLogo.classList.add('fade-in');
+        };
+
+        async function initAudio() {
+            if (audioContext) {
+                try { await audioContext.close(); } catch(e) {}
+            }
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const source = audioContext.createMediaStreamSource(stream);
+
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = BUFSIZE;
+            source.connect(analyser);
+
+            micDelayNode = audioContext.createDelay(1.0);
+            micGainNode = audioContext.createGain();
+
+            const initialDelay = document.getElementById('loop-delay').value / 1000;
+            const initialVol = document.getElementById('loop-volume').value / 100;
+            micDelayNode.delayTime.setValueAtTime(initialDelay, audioContext.currentTime);
+            micGainNode.gain.setValueAtTime(initialVol, audioContext.currentTime);
+
+            source.connect(micDelayNode);
+            micDelayNode.connect(micGainNode);
+            micGainNode.connect(audioContext.destination);
+
+            dataArray = new Float32Array(BUFSIZE);
+        }
+
+        function updateLoop() {
+            if (isAnalyzing && analyser) {
+                analyser.getFloatTimeDomainData(dataArray);
+                const result = autoCorrelate(dataArray, audioContext.sampleRate);
+
+                document.querySelectorAll('.bar').forEach(b => b.style.height = '0px');
+                
+                let detectedMidiNote = -1;
+
+                if (result.freq !== -1) {
+                    const midiNote = Math.round(69 + 12 * Math.log2(result.freq / 440));
+                    if (midiNote >= startNote && midiNote <= endNote) {
+                        detectedMidiNote = midiNote;
+
+                        document.getElementById('note-name').innerText = noteStrings[midiNote % 12];
+                        document.getElementById('frequency').innerText = `${Math.round(result.freq)} Hz`;
+                        document.getElementById('note-name').style.color = '#00ffcc';
+                        
+                        document.querySelectorAll('.key').forEach(k => { if (!k.dataset.pressing) k.classList.remove('active'); });
+                        const activeKey = document.getElementById(`key-${midiNote}`);
+                        if (activeKey) activeKey.classList.add('active');
+                        let barTarget = midiNote; if (noteStrings[barTarget % 12].includes('#')) barTarget--; 
+                        const activeBar = document.getElementById(`bar-${barTarget}`);
+                        if (activeBar) activeBar.style.height = `${Math.min(60, result.volume * 400)}px`;
+                    }
+                }
+
+                // 🛠️ 録音処理の割り込み部分だにゃん
+                if (isRecording) {
+                    const now = performance.now();
+                    const currentElapsed = now - recStartTime;
+
+                    if (detectedMidiNote !== currentRecNote) {
+                        // 音が変わった、あるいは声が途切れた時
+                        if (currentRecNote !== -1) {
+                            recordedEvents.push({
+                                type: 'noteoff',
+                                note: currentRecNote,
+                                time: currentElapsed
+                            });
+                        }
+                        // 新しい音が検出された時
+                        if (detectedMidiNote !== -1) {
+                            recordedEvents.push({
+                                type: 'noteon',
+                                note: detectedMidiNote,
+                                time: currentElapsed
+                            });
+                        }
+                        currentRecNote = detectedMidiNote;
+                    }
+                }
+
+                // 声が途切れた時は表示をリセット
+                if (result.freq === -1 && !currentOsc) {
+                    document.getElementById('note-name').innerText = '--';
+                    document.getElementById('frequency').innerText = '0 Hz';
+                }
+            }
+            requestAnimationFrame(updateLoop);
+        }
+        updateLoop();
+
+        function autoCorrelate(buf, sampleRate) {
+            let rms = 0; for (let i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
+            rms = Math.sqrt(rms / buf.length);
+            if (rms < 0.01) return { freq: -1, volume: rms };
+            let c = new Array(buf.length).fill(0);
+            for (let i = 0; i < buf.length; i++) { for (let j = 0; j < buf.length - i; j++) c[i] = c[i] + buf[j] * buf[j + i]; }
+            let d = 0; while (c[d] > c[d + 1]) d++;
+            let maxval = -1, maxpos = -1;
+            for (let i = d; i < buf.length; i++) { if (c[i] > maxval) { maxval = c[i]; maxpos = i; } }
+            return { freq: sampleRate / maxpos, volume: rms };
+        }
+
+        function playNote(midiNote) {
+            if (!audioContext || !isAnalyzing) return; 
+            stopNote();
+            
+            const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
+            document.getElementById('note-name').innerText = noteStrings[midiNote % 12];
+            document.getElementById('frequency').innerText = `${Math.round(freq)} Hz`;
+
+            document.getElementById('note-name').style.color = '#ff0077';
+
+            const type = document.getElementById('osc-type').value;
+            const osc = audioContext.createOscillator();
+            const g = audioContext.createGain();
+            osc.type = (type === 'custom') ? 'sawtooth' : type;
+            osc.connect(g); g.connect(audioContext.destination);
+            const now = audioContext.currentTime;
+            g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(masterVolume, now + 0.05);
+            osc.frequency.setValueAtTime(freq, now); osc.start();
+            currentOsc = osc; gainNode = g;
+            const keyEl = document.getElementById(`key-${midiNote}`);
+            keyEl.classList.add('active'); keyEl.dataset.pressing = "true";
+        }
+
+        function stopNote() {
+            if (currentOsc) {
+                const now = audioContext.currentTime;
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                currentOsc.stop(now + 0.1); currentOsc = null;
+                document.querySelectorAll('.key').forEach(k => { k.classList.remove('active'); delete k.dataset.pressing; });
+                
+                isPlayingClickNote = false; 
+            }
+        }
+
+        // 🛠️ 新設：Standard MIDI File (SMF) のバイナリデータを自前で生成する超関数だにゃん！
+        function createMidiFile(events) {
+            const ppq = 480; // 4分音符あたりの解像度 (Ticks)
+            const bpm = 120; // テンポ 120固定
+            // 1ミリ秒あたりのTick数 = (BPM * PPQ) / (60 * 1000)
+            const msToTicks = (bpm * ppq) / 60000;
+
+            let trackData = [];
+            let lastTick = 0;
+
+            // デルタタイム（可変長バイト）を書き込むヘルパー関数
+            function writeDeltaTime(ticks) {
+                let buffer = [];
+                let value = ticks;
+                buffer.push(value & 0x7F);
+                while ((value >>= 7) > 0) {
+                    buffer.push((value & 0x7F) | 0x80);
+                }
+                buffer.reverse();
+                trackData.push(...buffer);
+            }
+
+            // イベントをTickベースにシリアライズ
+            events.forEach(evt => {
+                let currentTick = Math.round(evt.time * msToTicks);
+                let deltaTime = currentTick - lastTick;
+                if (deltaTime < 0) deltaTime = 0;
+
+                writeDeltaTime(deltaTime);
+
+                if (evt.type === 'noteon') {
+                    trackData.push(0x90, evt.note, 0x64); // Note On: チャンネル0, 音番号, 速度100
+                } else if (evt.type === 'noteoff') {
+                    trackData.push(0x80, evt.note, 0x40); // Note Off: チャンネル0, 音番号, 速度64
+                }
+                lastTick = currentTick;
+            });
+
+            // トラック終了のメタイベントを追加 (End of Track)
+            writeDeltaTime(0);
+            trackData.push(0xFF, 0x2F, 0x00);
+
+            // MThd (ヘッダーチャンク)
+            const mthd = [
+                0x4D, 0x54, 0x68, 0x64, // "MThd"
+                0x00, 0x00, 0x00, 0x06, // チャンクサイズ (常に6)
+                0x00, 0x00,             // フォーマット0 (単一トラック)
+                0x00, 0x01,             // トラック数 (1)
+                (ppq >> 8) & 0xFF, ppq & 0xFF // 時間分解能 (480)
+            ];
+
+            // MTrk (トラックチャンク)
+            const len = trackData.length;
+            const mtrk = [
+                0x4D, 0x54, 0x72, 0x6B, // "MTrk"
+                (len >> 24) & 0xFF, (len >> 16) & 0xFF, (len >> 8) & 0xFF, len & 0xFF // チャンクサイズ
+            ];
+
+            return [...mthd, ...mtrk, ...trackData];
+        }
+    </script>
+</body>
+</html>
